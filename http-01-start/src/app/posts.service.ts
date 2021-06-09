@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
-import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
-import { catchError, map } from "rxjs/operators"
+import { HttpClient, HttpEventType, HttpHeaders, HttpParams } from "@angular/common/http";
+import { catchError, map, tap } from "rxjs/operators"
 import { Subject, throwError } from "rxjs";
 
 import { Post } from './post.model';
@@ -16,7 +16,10 @@ export class PostsService {
     const postData: Post = {title: title, content: content};
     this.http.post<{ name: string }>(
       'https://ng-complete-guide-3747e-default-rtdb.firebaseio.com/post.json',
-      postData
+      postData,
+      {
+        observe: 'response'
+      }
       )
       .subscribe(responseData => {
         console.log(responseData);
@@ -26,12 +29,16 @@ export class PostsService {
   }
 
   fetchPosts() {
+    let searchParams = new HttpParams();
+    searchParams = searchParams.append('print', 'pretty');
+    searchParams = searchParams.append('custom', 'key');
     return this.http
     .get<{[key: string]: Post }>(
       'https://ng-complete-guide-3747e-default-rtdb.firebaseio.com/post.json',
       {
         headers: new HttpHeaders({ 'Custom-Header': 'Hello' }),
-        params: new HttpParams().set('print', 'pretty')
+        params: searchParams,
+        responseType: 'json'
       }
       )
   .pipe(
@@ -50,6 +57,21 @@ export class PostsService {
   );
   }
   deletePosts() {
-    return this.http.delete('https://ng-complete-guide-3747e-default-rtdb.firebaseio.com/post.json')
+    return this.http.delete('https://ng-complete-guide-3747e-default-rtdb.firebaseio.com/post.json',
+    {
+      observe: 'events',
+      responseType: 'text'
+    }
+    ).pipe(
+      tap(event => {
+      console.log(event);
+      if (event.type === HttpEventType.Sent) {
+        // ...
+      }
+      if (event.type === HttpEventType.Response) {
+        console.log(event.body);
+      }
+    })
+    );
   }
 }
